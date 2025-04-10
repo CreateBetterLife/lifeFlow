@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Management Tool</title>
+    <style>
+        /* Global styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #000000;
+            color: #FFFFFF;
+        }
+
+        /* Current time styles */
+       .current-time {
+            text-align: left;
+        }
+
+       .title-time {
+            font-size: clamp(24px, 5vw, 50px);
+            font-weight: bold;
+            color: #FFFFFF;
+            margin-bottom: 10px;
+        }
+
+       .title-date {
+            font-size: clamp(14px, 2vw, 22px);
+            color: #FFFFFF;
+            margin-bottom: 30px;
+        }
+
+        /* Circular progress styles */
+       .circle-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            justify-self: center;
+        }
+
+       .circle {
+            fill: none;
+            stroke: url(#progress-gradient);
+            stroke-width: 30;
+            stroke-linecap: butt;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+       .circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 30;
+            stroke-linecap: butt;
+        }
+
+       .circle-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(12px, 2vw, 16px);
+            color: #FFFFFF;
+        }
+
+        /* Hourly container styles */
+       .hourly-container {
+            text-align: center;
+            justify-self: end;
+        }
+
+       .progress-title {
+            text-align: left;
+            font-size: clamp(14px, 2vw, 18px);
+            color: #FFFFFF;
+            margin-bottom: 5px;
+        }
+
+       .hourly-squares {
+            display: grid;
+            grid-template-columns: repeat(3, auto);
+            grid-template-rows: repeat(4, auto);
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+       .square-group {
+            display: flex;
+            gap: 5px;
+        }
+
+       .square {
+            width: clamp(6px, 1vw, 10px);
+            height: clamp(6px, 1vw, 10px);
+            border-radius: 2px;
+        }
+
+       .square.used {
+            background-color: #5c260a;
+        }
+
+       .square.remaining {
+            background-color: #FC461F;
+        }
+
+        /* Other progress bar styles */
+       .daily-container,
+       .monthly-container,
+       .yearly-container,
+       .lifetime-container {
+            text-align: left;
+        }
+
+       .progress-bar {
+            width: 100%;
+            border-radius: 8px;
+            margin-top: 15px;
+            margin-bottom: 30px;
+            overflow: hidden;
+            cursor: pointer;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+       .progress {
+            height: 40px;
+            text-align: center;
+            line-height: 40px;
+            color: #FFFFFF;
+            border-radius: 8px;
+            background-color: #FC461F;
+        }
+
+        /* Input and button styles */
+        input {
+            margin: 15px;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            background-color: #000000;
+            color: #FFFFFF;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #FC461F;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #d33a1a;
+        }
+
+        /* Modal styles */
+       .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+
+       .modal-content {
+            background-color: #000000;
+            margin: 15% auto;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            width: clamp(280px, 80%, 350px);
+            border-radius: 15px;
+            color: #FFFFFF;
+        }
+
+       .close {
+            color: rgba(255, 255, 255, 0.2);
+            float: right;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+       .close:hover,
+       .close:focus {
+            color: #FFFFFF;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Time container styles */
+       .time-container {
+            text-align: center;
+            width: clamp(300px, 90%, 700px);
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: auto;
+            gap: clamp(10px, 2vw, 20px);
+            align-items: center;
+        }
+
+        @media (max-width: 600px) {
+           .time-container {
+                grid-template-columns: 1fr;
+            }
+
+           .current-time,
+           .circle-container,
+           .hourly-container {
+                grid-column: 1 / -1;
+                justify-self: center;
+                text-align: center;
+            }
+
+           .circle-container {
+                justify-self: center;
+            }
+        }
+
+        /* 全屏按钮样式 */
+       .fullscreen-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="time-container">
+        <div class="current-time">
+            <span class="title-time">Calculating...</span>
+            <br>
+            <span class="title-date">Calculating...</span>
+        </div>
+        <div class="hourly-container">
+            <p class="progress-title" id="hourly-remaining">Hour</p>
+            <div class="hourly-squares" id="hourly-squares"></div>
+        </div>
+        <div class="circle-container">
+            <svg width="80" height="80" viewBox="0 0 100 100">
+                <defs>
+                    <linearGradient id="progress-gradient" x1="0" y1="0.5" x2="1" y2="0.5">
+                        <stop offset="0%" stop-color="rgba(255, 255, 255, 0.2)" />
+                        <stop offset="100%" stop-color="#FFFFFF" />
+                    </linearGradient>
+                </defs>
+                <circle class="circle-bg" cx="50" cy="50" r="25" />
+                <circle class="circle" cx="50" cy="50" r="25" />
+            </svg>
+            <div class="circle-text" id="minutely-remaining"></div>
+        </div>
+        <div class="daily-container">
+            <p class="progress-title" id="daily-remaining">Today</p>
+            <div class="progress-bar">
+                <div class="progress" id="daily-progress"></div>
+            </div>
+        </div>
+        <div class="monthly-container">
+            <p class="progress-title" id="monthly-remaining">Month</p>
+            <div class="progress-bar">
+                <div class="progress" id="monthly-progress"></div>
+            </div>
+        </div>
+        <div class="yearly-container">
+            <p class="progress-title" id="yearly-remaining">2025</p>
+            <div class="progress-bar">
+                <div class="progress" id="yearly-progress"></div>
+            </div>
+        </div>
+        <div class="lifetime-container">
+            <p class="progress-title" id="lifetime-remaining">Your Life</p>
+            <div class="progress-bar" id="lifetime-progress-bar" onclick="openModal()">
+                <div class="progress" id="lifetime-progress"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 全屏按钮 -->
+    <button class="fullscreen-button" onclick="toggleFullScreen()">全屏</button>
+
+    <!-- Modal -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <p>Please enter your birthdate (YYYY-MM-DD):</p>
+            <input type="date" id="birthdate">
+            <button onclick="calculateLifetime()">Calculate remaining time in your life</button>
+        </div>
+    </div>
+
+    <script>
+        // Constant definitions
+        const SECOND = 1000;
+        const MINUTE = 60 * SECOND;
+        const HOUR = 60 * MINUTE;
+        const DAY = 24 * HOUR;
+        const WEEK = 7 * DAY;
+
+        // Format time as minutes
+        function formatTimeToMinutes(milliseconds) {
+            return Math.floor(milliseconds / MINUTE);
+        }
+
+        // Format time as days
+        function formatTimeToDays(milliseconds) {
+            return Math.floor(milliseconds / DAY);
+        }
+
+        // Format time as weeks
+        function formatTimeToWeeks(milliseconds) {
+            return Math.floor(milliseconds / WEEK);
+        }
+
+        // Format time as years
+        function formatTimeToYears(milliseconds) {
+            return (milliseconds / (365 * DAY)).toFixed(1);
+        }
+
+        // Update the current time display
+        function updateCurrentTime() {
+            const now = new Date();
+            const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            const date = now.toLocaleDateString();
+            const time = now.toLocaleTimeString();
+            const day = days[now.getDay()];
+            document.querySelector('.title-time').textContent = time;
+            document.querySelector('.title-date').textContent = `${date} ${day}`;
+            return now;
+        }
+
+        // Update the remaining time and progress bars for each dimension
+        function updateTimeDimensions(now) {
+            // This minute
+            const endOfMinute = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() + 1, 0);
+            const minutelyRemaining = endOfMinute - now;
+            const minutelyProgress = (minutelyRemaining / MINUTE) * 100;
+            const circle = document.querySelector('.circle');
+            const circumference = 2 * Math.PI * 25;
+            circle.style.strokeDasharray = `${circumference}`;
+            circle.style.strokeDashoffset = `${circumference - (minutelyProgress / 100) * circumference}`;
+
+            // This hour
+            const endOfHour = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours() + 1, 0, 0);
+            const hourlyRemaining = endOfHour - now;
+            const hourlyProgress = (hourlyRemaining / HOUR) * 100;
+            const passedMinutes = 60 - Math.round(hourlyProgress / 100 * 60);
+            document.getElementById('hourly-remaining').textContent = `Hour: ${formatTimeToMinutes(hourlyRemaining)} minute`;
+            const squares = document.querySelectorAll('.square');
+            squares.forEach((square, index) => {
+                if (index < passedMinutes) {
+                    square.classList.add('used');
+                    square.classList.remove('remaining');
+                } else {
+                    square.classList.add('remaining');
+                    square.classList.remove('used');
+                }
+            });
+
+            // Today
+            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+            const dailyRemaining = endOfDay - now;
+            const dailyHours = Math.floor(dailyRemaining / HOUR);
+            const dailyMinutes = Math.floor((dailyRemaining % HOUR) / MINUTE);
+            document.getElementById('daily-remaining').textContent = `Today: ${dailyHours} hours ${dailyMinutes} minutes`;
+            const dailyProgress = (dailyRemaining / DAY) * 100;
+            document.getElementById('daily-progress').style.width = `${dailyProgress}%`;
+            document.getElementById('daily-progress').textContent = `${Math.round(dailyProgress)}%`;
+
+            // This month
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+            const monthlyRemaining = endOfMonth - now;
+            const totalDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const monthlyProgress = (monthlyRemaining / (totalDaysInMonth * DAY)) * 100;
+            document.getElementById('monthly-remaining').textContent = `Month: ${formatTimeToDays(monthlyRemaining)} days`;
+            document.getElementById('monthly-progress').style.width = `${monthlyProgress}%`;
+            document.getElementById('monthly-progress').textContent = `${Math.round(monthlyProgress)}%`;
+
+            // This year
+            const endOfYear = new Date(2025, 11, 31, 23, 59, 59);
+            const isLeap = (2025 % 4 === 0 && 2025 % 100!== 0) || (2025 % 400 === 0);
+            const totalDaysInYear = isLeap? 366 : 365;
+            const yearlyRemaining = endOfYear - now;
+            const yearlyProgress = (yearlyRemaining / (totalDaysInYear * DAY)) * 100;
+            document.getElementById('yearly-remaining').textContent = `2025: ${formatTimeToWeeks(yearlyRemaining)} weeks`;
+            document.getElementById('yearly-progress').style.width = `${yearlyProgress}%`;
+            document.getElementById('yearly-progress').textContent = `${Math.round(yearlyProgress)}%`;
+        }
+
+        // 预估不同年代出生人的平均寿命
+        function calculateLifeExpectancy(birthYear) {
+            const currentYear = 2025;
+
+            // 历史数据分段处理
+            if (birthYear < 1949) {
+                return 35;
+            }
+
+            // 分段线性模型
+            if (birthYear <= 2024) {
+                if (birthYear < 1980) {
+                    return 35 + (birthYear - 1950) * 0.6;
+                } else if (birthYear < 2010) {
+                    return 67.9 + (birthYear - 1980) * 0.35;
+                } else {
+                    return 74.8 + (birthYear - 2010) * 0.3;
+                }
+            }
+
+            // 未来预测模型
+            const maxLife = 85;
+            const k = 0.03;
+            const t0 = 2030;
+            const base = calculateLifeExpectancy(2024);
+            return base + (maxLife - base) / (1 + Math.exp(-k * (birthYear - t0)));
+        }
+
+        // Update the remaining time in your life
+        function updateLifetime(birthdate) {
+            const now = new Date();
+            const birthYear = birthdate.getFullYear();
+            const lifeExpectancy = calculateLifeExpectancy(birthYear);
+            const endOfLife = new Date(birthYear + lifeExpectancy, birthdate.getMonth(), birthdate.getDate());
+            const lifetimeRemaining = endOfLife - now;
+            if (lifetimeRemaining < 0) {
+                document.getElementById('lifetime-remaining').textContent = 'Your lifetime has expired.';
+                document.getElementById('lifetime-progress').style.width = '100%';
+                document.getElementById('lifetime-progress').textContent = '100%';
+            } else {
+                let totalLifetimeDays = 0;
+                for (let year = birthYear; year < birthYear + lifeExpectancy; year++) {
+                    totalLifetimeDays += ((year % 4 === 0 && year % 100!== 0) || (year % 400 === 0))? 366 : 365;
+                }
+                const lifetimeProgress = (lifetimeRemaining / (totalLifetimeDays * DAY)) * 100;
+                document.getElementById('lifetime-remaining').textContent = `Your Life: ${formatTimeToYears(lifetimeRemaining)} years`;
+                document.getElementById('lifetime-progress').style.width = `${lifetimeProgress}%`;
+                document.getElementById('lifetime-progress').textContent = `${Math.round(lifetimeProgress)}%`;
+            }
+            closeModal();
+        }
+
+        // Calculate the remaining time in your life
+        function calculateLifetime() {
+            const birthdateInput = document.getElementById('birthdate').value;
+            if (!birthdateInput) {
+                alert('Please enter your birthdate.');
+                return;
+            }
+            const birthdate = new Date(birthdateInput);
+            updateLifetime(birthdate);
+        }
+
+        // Initialize 60 squares
+        function initHourlySquares() {
+            const hourlySquares = document.getElementById('hourly-squares');
+            for (let i = 0; i < 4; i++) {
+                for (let j = 0; j < 3; j++) {
+                    const squareGroup = document.createElement('div');
+                    squareGroup.classList.add('square-group');
+                    for (let k = 0; k < 5; k++) {
+                        const square = document.createElement('div');
+                        square.classList.add('square');
+                        squareGroup.appendChild(square);
+                    }
+                    hourlySquares.appendChild(squareGroup);
+                }
+            }
+        }
+
+        // Main update function
+        function main() {
+            try {
+                const now = updateCurrentTime();
+                updateTimeDimensions(now);
+            } catch (error) {
+                console.error('Error updating time:', error);
+            }
+        }
+
+        // Open the modal
+        function openModal() {
+            document.getElementById('myModal').style.display = 'block';
+        }
+
+        // Close the modal
+        function closeModal() {
+            document.getElementById('myModal').style.display = 'none';
+        }
+
+        // Close the modal when clicking outside
+        window.onclick = function (event) {
+            const modal = document.getElementById('myModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+
+        // 动态改变渐变角度的函数
+        function changeGradientAngle(x1, y1, x2, y2) {
+            const gradient = document.getElementById('progress-gradient');
+            gradient.setAttribute('x1', x1);
+            gradient.setAttribute('y1', y1);
+            gradient.setAttribute('x2', x2);
+            gradient.setAttribute('y2', y2);
+        }
+
+        // 示例：设置渐变角度为从左到右
+        changeGradientAngle(0, 0.5, 1, 0.5);
+
+        // 全屏切换函数
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
+                    document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) { /* IE11 */
+                    document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) { /* Safari */
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) { /* IE11 */
+                    document.msExitFullscreen();
+                }
+            }
+        }
+
+        // Initialize squares
+        initHourlySquares();
+
+        // Run once when the page loads
+        main();
+
+        // Update every second
+        setInterval(main, 1000);
+    </script>
+</body>
+
+</html>    
