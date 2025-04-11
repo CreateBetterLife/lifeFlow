@@ -428,11 +428,12 @@
             const dailyRemaining = dailyEndTime - (now > dailyStartTime? now : dailyStartTime);
             const dailyHours = Math.floor(dailyRemaining / HOUR);
             const dailyMinutes = Math.floor((dailyRemaining % HOUR) / MINUTE);
-            document.getElementById('daily-remaining').textContent = `Today: ${dailyHours} hours ${dailyMinutes} minutes`;
+            const dailySeconds = Math.floor((dailyRemaining % MINUTE) / SECOND);
+            document.getElementById('daily-remaining').textContent = `Today: ${dailyHours} hours ${dailyMinutes} minutes ${dailySeconds} seconds`;
             const dailyTotal = dailyEndTime - dailyStartTime;
             const dailyProgress = (dailyRemaining / dailyTotal) * 100;
             document.getElementById('daily-progress').style.width = `${dailyProgress}%`;
-            document.getElementById('daily-progress').textContent = `${Math.round(dailyProgress)}%`;
+            document.getElementById('daily-progress').textContent = `${dailyProgress.toFixed(3)}%`;
 
             // This month
             const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
