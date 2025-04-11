@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Time Management Tool</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <style>
         /* Global styles */
         body {
@@ -47,7 +48,7 @@
 
        .circle {
             fill: none;
-            stroke: url(#progress-gradient);
+            stroke: #FFFFFF;
             stroke-width: 30;
             stroke-linecap: butt;
             transform: rotate(-90deg);
@@ -227,16 +228,59 @@
             }
         }
 
-        /* 全屏按钮样式 */
-       .fullscreen-button {
+        /* 设置按钮样式 */
+       .settings-button {
             position: fixed;
-            bottom: 20px;
+            top: 20px;
             right: 20px;
+            background-color: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* 横屏布局 */
+        @media (orientation: landscape) {
+           .time-container {
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: auto auto auto;
+            }
+
+           .current-time {
+                grid-row: 1;
+                grid-column: 1;
+            }
+
+           .hourly-container {
+                grid-row: 1;
+                grid-column: 2;
+            }
+
+           .circle-container {
+                grid-row: 1;
+                grid-column: 3;
+            }
+
+           .daily-container {
+                grid-row: 2;
+                grid-column: 1 / -1;
+            }
+
+           .monthly-container,
+           .yearly-container,
+           .lifetime-container {
+                grid-row: 3;
+            }
         }
     </style>
 </head>
 
 <body>
+    <!-- 设置按钮 -->
+    <button class="settings-button" onclick="openModal()">
+        <i class="fa-solid fa-gear"></i>
+    </button>
+
     <div class="time-container">
         <div class="current-time">
             <span class="title-time">Calculating...</span>
@@ -249,12 +293,6 @@
         </div>
         <div class="circle-container">
             <svg width="80" height="80" viewBox="0 0 100 100">
-                <defs>
-                    <linearGradient id="progress-gradient" x1="0" y1="0.5" x2="1" y2="0.5">
-                        <stop offset="0%" stop-color="rgba(255, 255, 255, 0.2)" />
-                        <stop offset="100%" stop-color="#FFFFFF" />
-                    </linearGradient>
-                </defs>
                 <circle class="circle-bg" cx="50" cy="50" r="25" />
                 <circle class="circle" cx="50" cy="50" r="25" />
             </svg>
@@ -280,14 +318,11 @@
         </div>
         <div class="lifetime-container">
             <p class="progress-title" id="lifetime-remaining">Your Life</p>
-            <div class="progress-bar" id="lifetime-progress-bar" onclick="openModal()">
+            <div class="progress-bar" id="lifetime-progress-bar">
                 <div class="progress" id="lifetime-progress"></div>
             </div>
         </div>
     </div>
-
-    <!-- 全屏按钮 -->
-    <button class="fullscreen-button" onclick="toggleFullScreen()">全屏</button>
 
     <!-- Modal -->
     <div id="myModal" class="modal">
@@ -295,7 +330,11 @@
             <span class="close" onclick="closeModal()">&times;</span>
             <p>Please enter your birthdate (YYYY-MM-DD):</p>
             <input type="date" id="birthdate">
-            <button onclick="calculateLifetime()">Calculate remaining time in your life</button>
+            <p>Please enter the start time of the day (HH:MM):</p>
+            <input type="time" id="daily-start-time">
+            <p>Please enter the end time of the day (HH:MM):</p>
+            <input type="time" id="daily-end-time">
+            <button onclick="calculateAndClose()">Save Settings</button>
         </div>
     </div>
 
@@ -340,7 +379,7 @@
         }
 
         // Update the remaining time and progress bars for each dimension
-        function updateTimeDimensions(now) {
+        async function updateTimeDimensions(now) {
             // This minute
             const endOfMinute = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes() + 1, 0);
             const minutelyRemaining = endOfMinute - now;
@@ -368,12 +407,30 @@
             });
 
             // Today
-            const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
-            const dailyRemaining = endOfDay - now;
+            let dailyStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+            let dailyEndTime = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 0);
+
+            const dailyStartTimeInput = document.getElementById('daily-start-time').value;
+            if (dailyStartTimeInput) {
+                const [hours, minutes] = dailyStartTimeInput.split(':');
+                dailyStartTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+            }
+
+            const dailyEndTimeInput = document.getElementById('daily-end-time').value;
+            if (dailyEndTimeInput) {
+                const [hours, minutes] = dailyEndTimeInput.split(':');
+                dailyEndTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0);
+                if (dailyEndTime < dailyStartTime) {
+                    dailyEndTime.setDate(dailyEndTime.getDate() + 1);
+                }
+            }
+
+            const dailyRemaining = dailyEndTime - (now > dailyStartTime? now : dailyStartTime);
             const dailyHours = Math.floor(dailyRemaining / HOUR);
             const dailyMinutes = Math.floor((dailyRemaining % HOUR) / MINUTE);
             document.getElementById('daily-remaining').textContent = `Today: ${dailyHours} hours ${dailyMinutes} minutes`;
-            const dailyProgress = (dailyRemaining / DAY) * 100;
+            const dailyTotal = dailyEndTime - dailyStartTime;
+            const dailyProgress = (dailyRemaining / dailyTotal) * 100;
             document.getElementById('daily-progress').style.width = `${dailyProgress}%`;
             document.getElementById('daily-progress').textContent = `${Math.round(dailyProgress)}%`;
 
@@ -446,18 +503,16 @@
                 document.getElementById('lifetime-progress').style.width = `${lifetimeProgress}%`;
                 document.getElementById('lifetime-progress').textContent = `${Math.round(lifetimeProgress)}%`;
             }
-            closeModal();
         }
 
-        // Calculate the remaining time in your life
-        function calculateLifetime() {
+        // 保存设置并关闭模态框
+        function calculateAndClose() {
             const birthdateInput = document.getElementById('birthdate').value;
-            if (!birthdateInput) {
-                alert('Please enter your birthdate.');
-                return;
+            if (birthdateInput) {
+                const birthdate = new Date(birthdateInput);
+                updateLifetime(birthdate);
             }
-            const birthdate = new Date(birthdateInput);
-            updateLifetime(birthdate);
+            closeModal();
         }
 
         // Initialize 60 squares
@@ -478,10 +533,10 @@
         }
 
         // Main update function
-        function main() {
+        async function main() {
             try {
                 const now = updateCurrentTime();
-                updateTimeDimensions(now);
+                await updateTimeDimensions(now);
             } catch (error) {
                 console.error('Error updating time:', error);
             }
@@ -502,39 +557,6 @@
             const modal = document.getElementById('myModal');
             if (event.target == modal) {
                 closeModal();
-            }
-        }
-
-        // 动态改变渐变角度的函数
-        function changeGradientAngle(x1, y1, x2, y2) {
-            const gradient = document.getElementById('progress-gradient');
-            gradient.setAttribute('x1', x1);
-            gradient.setAttribute('y1', y1);
-            gradient.setAttribute('x2', x2);
-            gradient.setAttribute('y2', y2);
-        }
-
-        // 示例：设置渐变角度为从左到右
-        changeGradientAngle(0, 0.5, 1, 0.5);
-
-        // 全屏切换函数
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) { /* Safari */
-                    document.documentElement.webkitRequestFullscreen();
-                } else if (document.documentElement.msRequestFullscreen) { /* IE11 */
-                    document.documentElement.msRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) { /* Safari */
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) { /* IE11 */
-                    document.msExitFullscreen();
-                }
             }
         }
 
