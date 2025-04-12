@@ -23,6 +23,7 @@
         /* Current time styles */
        .current-time {
             text-align: left;
+            align-self: start; /* 让当前时间模块顶端对齐 */
         }
 
        .title-time {
@@ -43,7 +44,8 @@
             position: relative;
             width: 80px;
             height: 80px;
-            justify-self: center;
+            justify-self: end;
+            align-self: start; /* 让环形进度条模块顶端对齐 */
         }
 
        .circle {
@@ -74,14 +76,10 @@
         /* Hourly container styles */
        .hourly-container {
             text-align: center;
-            justify-self: end;
-        }
-
-       .progress-title {
-            text-align: left;
-            font-size: clamp(14px, 2vw, 18px);
-            color: #FFFFFF;
-            margin-bottom: 5px;
+            align-self: start; /* 让hour点阵模块顶端对齐 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
        .hourly-squares {
@@ -90,7 +88,9 @@
             grid-template-rows: repeat(4, auto);
             gap: 10px;
             justify-content: center;
-            margin-top: 20px;
+            margin: 0; /* 去掉点阵模块的外边距 */
+            width: 100%; /* 让点阵模块宽度占满父容器 */
+            height: 100%; /* 让点阵模块高度占满父容器 */
         }
 
        .square-group {
@@ -123,8 +123,8 @@
        .progress-bar {
             width: 100%;
             border-radius: 8px;
-            margin-top: 15px;
-            margin-bottom: 30px;
+            margin-top: 10px;
+            margin-bottom: 10px;
             overflow: hidden;
             cursor: pointer;
             background-color: rgba(255, 255, 255, 0.2);
@@ -206,8 +206,8 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             grid-template-rows: auto;
-            gap: clamp(10px, 2vw, 20px);
-            align-items: center;
+            gap: clamp(5px, 1vw, 10px);
+            align-items: start; /* 让所有子模块顶端对齐 */
         }
 
         @media (max-width: 600px) {
@@ -254,11 +254,14 @@
            .hourly-container {
                 grid-row: 1;
                 grid-column: 2;
+                justify-self: end; /* 让hourly-container在横屏时靠右对齐 */
+                align-self: start;
             }
 
            .circle-container {
                 grid-row: 1;
                 grid-column: 3;
+                justify-self: end; /* 横屏时右对齐 */
             }
 
            .daily-container {
@@ -288,7 +291,6 @@
             <span class="title-date">Calculating...</span>
         </div>
         <div class="hourly-container">
-            <p class="progress-title" id="hourly-remaining">Hour</p>
             <div class="hourly-squares" id="hourly-squares"></div>
         </div>
         <div class="circle-container">
@@ -394,7 +396,6 @@
             const hourlyRemaining = endOfHour - now;
             const hourlyProgress = (hourlyRemaining / HOUR) * 100;
             const passedMinutes = 60 - Math.round(hourlyProgress / 100 * 60);
-            document.getElementById('hourly-remaining').textContent = `Hour: ${formatTimeToMinutes(hourlyRemaining)} minute`;
             const squares = document.querySelectorAll('.square');
             squares.forEach((square, index) => {
                 if (index < passedMinutes) {
